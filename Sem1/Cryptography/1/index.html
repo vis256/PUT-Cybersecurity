@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SBOX Testing</title>
+  </head>
+  <body>
+    <h1 id="filename_text"></h1>
+
+    <h4>Hex display of file</h4>
+    <code id="hex_view"></code>
+
+    <h4>Removed '00' bytes</h4>
+    <code id="trimmed_hex_view"></code>
+
+    <h3>Step 1: Default functions</h3>
+    <code id="functions_view"></code>
+
+    <h3>Step 1.5: Bit balance check</h3>
+    <code id="bit_balance_check"></code>
+
+    <h3>Step 2: Generate a set of LF</h3>
+    <code id="lf_count"></code> <br />
+    <code id="lf_s"></code>
+
+    <h3>Step 3: Check NL</h3>
+    <code id="nl_view"></code>
+
+    <h3>Step 4: Strict Avalanche Criterion</h3>
+    <code id="sac_view"></code>
+
+    <!-- Scripts -->
+    <script>
+      async function file_bytes(filename) {
+        const response = await fetch(filename);
+        const data = await response.arrayBuffer();
+        const bytes = new Uint8Array(data);
+        return bytes;
+      }
+
+      function get_bit(byte, bit_index) {
+        return (byte >> bit_index) & 1;
+      }
+
+      function get_functions(file_bytes) {
+        const functions = [];
+
+        for (let i = 0; i < 8; i++) {
+          functions.push([]);
+          for (let j = 0; j < file_bytes.length; j++) {
+            const bit = get_bit(file_bytes[j], i);
+            functions[i].push(bit);
+          }
+        }
+
+        return functions;
+      }
+
+      function is_function_balanced(func) {
+        const zeros = func.filter((bit) => bit === 0).length;
+        const ones = func.filter((bit) => bit === 1).length;
+
+        return { zeros, ones, balanced: zeros === ones };
+      }
+
+      function get_column(matrix, column_index) {
+        const col = [];
+        for (let i = 0; i < matrix.length; i++) {
+          col.push(matrix[i][column_index]);
+        }
+        return col;
+      }
+
+      function generate_lfs(functions) {
+        const lf = [];
+        // Every column
+        for (let i = 0; i < 8; i++) {
+          const col = get_column(functions, i);
+          lf.push(col);
+        }
+
+        // Every pair
+        for (let i = 0; i < 8; i++) {
+          for (let j = i + 1; j < 8; j++) {
+            const col1 = get_column(functions, i);
+            const col2 = get_column(functions, j);
+            const result = col1.map((v, index) => v ^ col2[index]);
+            lf.push(result);
+          }
+        }
+
+        // Every triple
+        for (let i = 0; i < 8; i++) {
+          for (let j = i + 1; j < 8; j++) {
+            for (let k = j + 1; k < 8; k++) {
+              const col1 = get_column(functions, i);
+              const col2 = get_column(functions, j);
+              const col3 = get_column(functions, k);
+              const result = col1.map(
+                (v, index) => v ^ col2[index] ^ col3[index]
+              );
+              lf.push(result);
+            }
+          }
+        }
+
+        // Every quad
+        for (let i = 0; i < 8; i++) {
+          for (let j = i + 1; j < 8; j++) {
+            for (let k = j + 1; k < 8; k++) {
+              for (let l = k + 1; l < 8; l++) {
+                const col1 = get_column(functions, i);
+                const col2 = get_column(functions, j);
+                const col3 = get_column(functions, k);
+                const col4 = get_column(functions, l);
+                const result = col1.map(
+                  (v, index) => v ^ col2[index] ^ col3[index] ^ col4[index]
+                );
+                lf.push(result);
+              }
+            }
+          }
+        }
+
+        // Every quint
+        for (let i = 0; i < 8; i++) {
+          for (let j = i + 1; j < 8; j++) {
+            for (let k = j + 1; k < 8; k++) {
+              for (let l = k + 1; l < 8; l++) {
+                for (let m = l + 1; m < 8; m++) {
+                  const col1 = get_column(functions, i);
+                  const col2 = get_column(functions, j);
+                  const col3 = get_column(functions, k);
+                  const col4 = get_column(functions, l);
+                  const col5 = get_column(functions, m);
+                  const result = col1.map(
+                    (v, index) =>
+                      v ^ col2[index] ^ col3[index] ^ col4[index] ^ col5[index]
+                  );
+                  lf.push(result);
+                }
+              }
+            }
+          }
+        }
+
+        // Every sext
+        for (let i = 0; i < 8; i++) {
+          for (let j = i + 1; j < 8; j++) {
+            for (let k = j + 1; k < 8; k++) {
+              for (let l = k + 1; l < 8; l++) {
+                for (let m = l + 1; m < 8; m++) {
+                  for (let n = m + 1; n < 8; n++) {
+                    const col1 = get_column(functions, i);
+                    const col2 = get_column(functions, j);
+                    const col3 = get_column(functions, k);
+                    const col4 = get_column(functions, l);
+                    const col5 = get_column(functions, m);
+                    const col6 = get_column(functions, n);
+                    const result = col1.map(
+                      (v, index) =>
+                        v ^
+                        col2[index] ^
+                        col3[index] ^
+                        col4[index] ^
+                        col5[index] ^
+                        col6[index]
+                    );
+                    lf.push(result);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Every sept
+        for (let i = 0; i < 8; i++) {
+          for (let j = i + 1; j < 8; j++) {
+            for (let k = j + 1; k < 8; k++) {
+              for (let l = k + 1; l < 8; l++) {
+                for (let m = l + 1; m < 8; m++) {
+                  for (let n = m + 1; n < 8; n++) {
+                    for (let o = n + 1; o < 8; o++) {
+                      const col1 = get_column(functions, i);
+                      const col2 = get_column(functions, j);
+                      const col3 = get_column(functions, k);
+                      const col4 = get_column(functions, l);
+                      const col5 = get_column(functions, m);
+                      const col6 = get_column(functions, n);
+                      const col7 = get_column(functions, o);
+                      const result = col1.map(
+                        (v, index) =>
+                          v ^
+                          col2[index] ^
+                          col3[index] ^
+                          col4[index] ^
+                          col5[index] ^
+                          col6[index] ^
+                          col7[index]
+                      );
+                      lf.push(result);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Every oct
+        for (let i = 0; i < 8; i++) {
+          for (let j = i + 1; j < 8; j++) {
+            for (let k = j + 1; k < 8; k++) {
+              for (let l = k + 1; l < 8; l++) {
+                for (let m = l + 1; m < 8; m++) {
+                  for (let n = m + 1; n < 8; n++) {
+                    for (let o = n + 1; o < 8; o++) {
+                      for (let p = o + 1; p < 8; p++) {
+                        const col1 = get_column(functions, i);
+                        const col2 = get_column(functions, j);
+                        const col3 = get_column(functions, k);
+                        const col4 = get_column(functions, l);
+                        const col5 = get_column(functions, m);
+                        const col6 = get_column(functions, n);
+                        const col7 = get_column(functions, o);
+                        const col8 = get_column(functions, p);
+                        const result = col1.map(
+                          (v, index) =>
+                            v ^
+                            col2[index] ^
+                            col3[index] ^
+                            col4[index] ^
+                            col5[index] ^
+                            col6[index] ^
+                            col7[index] ^
+                            col8[index]
+                        );
+                        lf.push(result);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // All zeros
+        lf.push(Array(lf[0].length).fill(0));
+
+        // Push inverses of all previous LFs
+        lf.forEach((func, index) => {
+          const inverse = func.map((v) => (v === 0 ? 1 : 0));
+          lf.push(inverse);
+        });
+
+        return lf;
+      }
+
+      function hamming_weight(v) {
+        return v.filter((bit) => bit === 1).length;
+      }
+
+      function hamming_distance(a, b) {
+        let distance = 0;
+
+        // console.log(a.length, b.length);
+
+        for (let i = 0; i < a.length; i++) {
+          distance += a[i] ^ b[i];
+        }
+
+        return distance;
+      }
+
+      function calculate_nonlinearity(F, lf) {
+        let result = Infinity;
+        for (const l of lf) {
+          const dist = hamming_distance(F, l);
+          result = Math.min(result, dist);
+        }
+        return result;
+      }
+
+      function calculate_sac(func, sac_level = 1) {
+        const SACS = {
+          1: [0, 0, 0, 0, 0, 0, 0, 1],
+          2: [0, 0, 0, 0, 0, 0, 1, 0],
+          3: [0, 0, 0, 0, 0, 1, 0, 0],
+          4: [0, 0, 0, 0, 1, 0, 0, 0],
+          5: [0, 0, 0, 1, 0, 0, 0, 0],
+          6: [0, 0, 1, 0, 0, 0, 0, 0],
+          7: [0, 1, 0, 0, 0, 0, 0, 0],
+          8: [1, 0, 0, 0, 0, 0, 0, 0],
+        };
+
+        const alpha = SACS[sac_level];
+
+        const input = [];
+        for (let i = 0; i < 256; i++) {
+          input.push(i.toString(2).padStart(8, "0").split("").map(Number));
+        }
+
+        const f = (func) => {
+          let result = 0;
+
+          input.forEach((inp) => {
+            for (let j = 0; j < 256; j++) {
+              const x = func[j] ^ inp;
+              result ^= x;
+            }
+          });
+
+          return result;
+        };
+
+        // console.log(f(func));
+        // const a = [];
+        // for (let i = 0; i < 256; i++) {
+        //     const row = [];
+        //     for (let j = 0; j < 8; j++) {
+        //         row.push(func[i] ^ input[i][j] ^ alpha[j]);
+        //     }
+        //     a.push(row);
+
+        // }
+
+        // console.log(original_output);
+      }
+
+      const filename = "sbox_08x08_20130110_011319_02.SBX";
+      filename_text.innerText = `Report for ${filename}`;
+
+      file_bytes(filename).then((bytes) => {
+        const hexResult = Array.from(bytes)
+          .map((byte, index) => {
+            if (index % 8 === 0) {
+              return byte.toString(16).padStart(2, "0") + "\n";
+            }
+            return byte.toString(16).padStart(2, "0");
+          })
+          .join(" ");
+
+        hex_view.innerHTML = `${bytes.length} bytes: \n` + hexResult;
+
+        // Remove every second byte
+        const trimmed_bytes = bytes.filter((v, index) => index % 2 === 0);
+
+        const trimmed_hex_result = Array.from(trimmed_bytes)
+          .map((byte, index) => {
+            if (index % 8 === 0) {
+              return byte.toString(16).padStart(2, "0") + "\n";
+            }
+            return byte.toString(16).padStart(2, "0");
+          })
+          .join(" ");
+
+        trimmed_hex_view.innerHTML =
+          `${trimmed_bytes.length} bytes: \n` + trimmed_hex_result;
+
+        // Step 1: Default functions
+        const functions = get_functions(trimmed_bytes);
+
+        console.log("Functions:", functions);
+
+        functions.forEach((func, index) => {
+          functions_view.innerHTML += `F${index + 1}: ${func.join("")}<br>`;
+        });
+
+        // Step 1.5: Check balance
+        functions.forEach((func, index) => {
+          const { zeros, ones, balanced } = is_function_balanced(func);
+          bit_balance_check.innerHTML += `F${
+            index + 1
+          }: ${zeros}x'0'; ${ones}x'1' = ${balanced}<br>`;
+        });
+
+        // Step 2.1: Generate matrix of all possible inputs
+        const inputs = [];
+        for (let i = 0; i < 256; i++) {
+          const bitArray = i.toString(2).padStart(8, "0").split("").map(Number);
+          inputs.push(bitArray);
+        }
+
+        console.log("Inputs:", inputs);
+
+        // Step 2.2: Generate set of LF functions
+        const byte_arr = [];
+        for (let i = 0; i < 256; i++) {
+          byte_arr.push(i);
+        }
+
+        const bit_arr = byte_arr.map((byte) =>
+          byte.toString(2).padStart(8, "0").split("").map(Number)
+        );
+
+        const lf = generate_lfs(bit_arr);
+
+        console.log("LF:", lf);
+        lf_count.innerHTML = `Generated ${lf.length} LF functions`;
+        lf_s.innerHTML = lf.map((func) => func.join("")).join("<br>");
+
+        // Step 3: Calculate nonlinearity
+        functions.forEach((func, index) => {
+          const nl = calculate_nonlinearity(func, lf);
+          nl_view.innerHTML += `F${index + 1}: ${func.join(
+            ""
+          )} <br> NL: ${nl}<br> <br>`;
+        });
+
+        // Step 4: Check Strict Avalanche Criterion
+        functions.forEach((func, index) => {
+          //   console.log(calculate_sac(func));
+        });
+      });
+    </script>
+  </body>
+</html>
