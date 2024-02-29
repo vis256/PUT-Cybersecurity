@@ -4,14 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SBOX Testing</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.min.css"
+    />
   </head>
   <body>
-    <h1 id="filename_text"></h1>
+    <h1>Cryptography 1</h1>
+    <h3 id="filename_text"></h3>
 
-    <h4>Hex display of file</h4>
+    <h4 id="hex_view_title">Hex display of file</h4>
     <code id="hex_view"></code>
 
-    <h4>Removed '00' bytes</h4>
+    <h4 id="trimmed_view_title">Removed '00' bytes</h4>
     <code id="trimmed_hex_view"></code>
 
     <h3>Step 1: Default functions</h3>
@@ -331,7 +336,7 @@
       }
 
       const filename = "sbox_08x08_20130110_011319_02.SBX";
-      filename_text.innerText = `Report for ${filename}`;
+      filename_text.innerText = `Filename: ${filename}`;
 
       file_bytes(filename).then((bytes) => {
         const hexResult = Array.from(bytes)
@@ -343,7 +348,8 @@
           })
           .join(" ");
 
-        hex_view.innerHTML = `${bytes.length} bytes: \n` + hexResult;
+        hex_view_title.innerHTML += ` (${bytes.length} bytes)`;
+        hex_view.innerHTML = hexResult;
 
         // Remove every second byte
         const trimmed_bytes = bytes.filter((v, index) => index % 2 === 0);
@@ -357,8 +363,8 @@
           })
           .join(" ");
 
-        trimmed_hex_view.innerHTML =
-          `${trimmed_bytes.length} bytes: \n` + trimmed_hex_result;
+        trimmed_view_title.innerHTML += ` (${trimmed_bytes.length} bytes)`;
+        trimmed_hex_view.innerHTML = trimmed_hex_result;
 
         // Step 1: Default functions
         const functions = get_functions(trimmed_bytes);
