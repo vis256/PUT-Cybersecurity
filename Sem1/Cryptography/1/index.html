@@ -303,36 +303,45 @@
 
         const alpha = SACS[sac_level];
 
-        const input = [];
+        let difference = 0;
+
+        const map = [];
+        const add = (key, value) => map.push({ key, value });
+        const get = (key) => map.find((e) => e.key === key);
+
+        const inputs = [];
         for (let i = 0; i < 256; i++) {
-          input.push(i.toString(2).padStart(8, "0").split("").map(Number));
+          const bitArray = i.toString(2).padStart(8, "0").split("").map(Number);
+          inputs.push(bitArray);
         }
 
-        const f = (func) => {
-          let result = 0;
+        for (let i = 0; i < 256; i++) {
+          const input = inputs[i].join("");
+          const output = func[i];
 
-          input.forEach((inp) => {
-            for (let j = 0; j < 256; j++) {
-              const x = func[j] ^ inp;
-              result ^= x;
-            }
-          });
+          add(input, output);
+        }
 
-          return result;
-        };
+        for (let i = 0; i < 256; i++) {
+          const bitArray = i.toString(2).padStart(8, "0").split("").map(Number);
+          const input = bitArray;
+          const inputKey = input.join("");
 
-        // console.log(f(func));
-        // const a = [];
-        // for (let i = 0; i < 256; i++) {
-        //     const row = [];
-        //     for (let j = 0; j < 8; j++) {
-        //         row.push(func[i] ^ input[i][j] ^ alpha[j]);
-        //     }
-        //     a.push(row);
+          for (let j = 0; j < input.length; j++) {
+            input[j] ^= alpha[j];
+          }
 
-        // }
+          const shiftedInputKey = input.join("");
 
-        // console.log(original_output);
+          const originalValue = get(inputKey).value;
+          const shiftedValue = get(shiftedInputKey).value;
+
+          const added = originalValue ^ shiftedValue;
+
+          difference += added;
+        }
+
+        return { bits: difference, ratio: difference / 256 };
       }
 
       const filename = "sbox_08x08_20130110_011319_02.SBX";
@@ -417,9 +426,20 @@
         });
 
         // Step 4: Check Strict Avalanche Criterion
+        const sac_results = [];
         functions.forEach((func, index) => {
-          //   console.log(calculate_sac(func));
+          sac_view.innerHTML += `F${index}: <br>`;
+          for (let sac_level = 1; sac_level < 8; sac_level++) {
+            const result = calculate_sac(func, sac_level);
+            sac_results.push(result.ratio);
+            sac_view.innerHTML += ` - SAC${sac_level}: ${result.bits} bits : ${
+              result.ratio * 100
+            }%<br> `;
+          }
         });
+        const avgSac =
+          sac_results.reduce((a, b) => a + b, 0) / sac_results.length;
+        sac_view.innerHTML += `<br>AVG: ${avgSac * 100}%<br> `;
       });
     </script>
   </body>
