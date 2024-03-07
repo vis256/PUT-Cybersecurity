@@ -19,6 +19,8 @@
     <h4 id="trimmed_view_title">Removed '00' bytes</h4>
     <code id="trimmed_hex_view"></code>
 
+    <table id="sbox_table" style="margin-top: 1rem"></table>
+
     <h3>Step 1: Default functions</h3>
     <code id="functions_view"></code>
 
@@ -34,6 +36,19 @@
 
     <h3>Step 4: Strict Avalanche Criterion</h3>
     <code id="sac_view"></code>
+
+    <h3>Step 5: Cycle check</h3>
+    <code id="cycle_check"></code>
+
+    <h3>Step 6: XOR profile</h3>
+
+    <label for="xor_profile_x">X</label>
+    <input value="0" name="xor_profile_x" type="number" id="xor_profile_x" />
+    <label for="xor_profile_y">Y</label>
+    <input value="0" name="xor_profile_y" type="number" id="xor_profile_y" />
+    <code id="xor_profile_result"></code>
+    <br />
+    <button id="xor_profile_button">Read XOR profile</button>
 
     <!-- Scripts -->
     <script>
@@ -344,6 +359,60 @@
         return { bits: difference, ratio: difference / 256 };
       }
 
+      function get_cycles(values) {
+        const visited = new Set();
+        const cycles = [];
+
+        for (let i = 0; i < values.length; i++) {
+          // Skip already checked
+          if (visited.has(i)) {
+            continue;
+          }
+
+          // Current cycle
+          const cycle = [];
+
+          let current = values[i];
+
+          while (!visited.has(current)) {
+            cycle.push(current);
+            visited.add(current);
+            current = values[current];
+          }
+
+          cycles.push(cycle);
+        }
+
+        return cycles;
+      }
+
+      function get_xor_profile(values) {
+        const profile = [];
+
+        for (let i = 0; i < 256; i++) {
+          profile.push(Array(255).fill(0));
+        }
+
+        const get = (x, y) => profile[x][y];
+        const add = (x, y) => {
+          profile[x][y]++;
+        };
+
+        for (let x1 = 0; x1 < 256; x1++) {
+          for (let x2 = 0; x2 < 256; x2++) {
+            const y1 = values[x1];
+            const y2 = values[x2];
+
+            const x = x1 ^ x2;
+            const y = y1 ^ y2;
+
+            add(x, y);
+          }
+        }
+
+        return profile;
+      }
+
       const filename = "sbox_08x08_20130110_011319_02.SBX";
       filename_text.innerText = `Filename: ${filename}`;
 
@@ -374,6 +443,19 @@
 
         trimmed_view_title.innerHTML += ` (${trimmed_bytes.length} bytes)`;
         trimmed_hex_view.innerHTML = trimmed_hex_result;
+
+        const sbox_values = trimmed_bytes;
+
+        const table = document.querySelector("#sbox_table");
+        let tableHTML = "<tbody><tr>";
+        sbox_values.forEach((byte, byte_index) => {
+          if (byte_index % 16 === 0) {
+            tableHTML += "</tr><tr>";
+          }
+          tableHTML += `<td>${byte}</td>`;
+        });
+        tableHTML += "</tr></tbody>";
+        table.innerHTML = tableHTML;
 
         // Step 1: Default functions
         const functions = get_functions(trimmed_bytes);
@@ -415,7 +497,6 @@
 
         console.log("LF:", lf);
         lf_count.innerHTML = `Generated ${lf.length} LF functions`;
-        lf_s.innerHTML = lf.map((func) => func.join("")).join("<br>");
 
         // Step 3: Calculate nonlinearity
         functions.forEach((func, index) => {
@@ -440,6 +521,44 @@
         const avgSac =
           sac_results.reduce((a, b) => a + b, 0) / sac_results.length;
         sac_view.innerHTML += `<br>AVG: ${avgSac * 100}%<br> `;
+
+        // Step 5: Cycle check
+        const cycles = get_cycles(sbox_values);
+        cycle_check.innerHTML = `Cycles: ${
+          get_cycles(sbox_values).length
+        } <br>`;
+        cycles.forEach((cycle, index) => {
+          cycle_check.innerHTML += `<br> Cycle ${index + 1}: ${cycle.join(
+            " > "
+          )}`;
+        });
+
+        // Step 6: XOR profile
+        const xor_profile = get_xor_profile(sbox_values);
+        console.log("XOR profile:", xor_profile);
+        let max = -Infinity;
+
+        xor_profile.forEach((row, x) => {
+          row.forEach((value, y) => {
+            if (value > max && x !== 0 && y !== 0) {
+              console.log("New max:", x, y, value);
+              max = value;
+            }
+          });
+        });
+
+        console.log("Max:", max);
+
+        const read_xor_profile = (x, y) => xor_profile[x][y];
+        const read_xor_profile_from_inputs = () => {
+          const x = parseInt(document.querySelector("#xor_profile_x").value);
+          const y = parseInt(document.querySelector("#xor_profile_y").value);
+          xor_profile_result.innerHTML = `XOR profile for ${x} and ${y}: ${xor_profile[x][y]}`;
+        };
+
+        document
+          .querySelector("#xor_profile_button")
+          .addEventListener("click", read_xor_profile_from_inputs);
       });
     </script>
   </body>
