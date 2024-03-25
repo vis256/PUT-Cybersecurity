@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shamir</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.min.css"
+    />
+  </head>
+  <body>
+    <h1>Cryptography 2 - Shamir</h1>
+
+    <h2>Split</h2>
+    <div class="row">
+      <span>Secret</span>
+      <input type="number" autocomplete="off" id="split-input" value="69" />
+    </div>
+    <div class="row">
+      <span>K</span>
+      <input type="number" autocomplete="off" id="k-split-input" value="3" />
+    </div>
+
+    <button id="split-button">Split</button>
+    <br />
+    <code id="split-results"></code>
+
+    <h2>Join</h2>
+    <div id="shares_container"></div>
+    <button id="add-share-button">+</button>
+
+    <div class="row">
+      <span>K</span>
+      <input type="number" autocomplete="off" id="k-join-input" value="3" />
+    </div>
+    <button id="join-button">Join</button>
+
+    <br />
+    <code id="join-results"></code>
+    <!-- Scripts -->
+    <script defer>
+      /**
+       * At least two points are needed to interpolate something.
+       * @class Lagrange polynomial interpolation.
+       * The computed interpolation polynomial will be reffered to as L(x).
+       * @example
+       * var l = new Lagrange(0, 0, 1, 1);
+       * var index = l.addPoint(0.5, 0.8);
+       * console.log(l.valueOf(0.1));
+       *
+       * l.changePoint(index, 0.5, 0.1);
+       * console.log(l.valueOf(0.1));
+       */
+      var Lagrange = function (x1, y1, x2, y2) {
+        this.xs = [x1, x2];
+        this.ys = [y1, y2];
+        this.ws = [];
+        this._updateWeights();
+      };
+
+      /**
+       * Adds a new point to the polynomial. L(x) = y
+       * @return {Number} The index of the added point. Used for changing the point. See changePoint.
+       */
+      Lagrange.prototype.addPoint = function (x, y) {
+        this.xs.push(x);
+        this.ys.push(y);
+        this._updateWeights();
+        return this.xs.length - 1;
+      };
+
+      /**
+       * Changes a previously added point.
+       */
+      Lagrange.prototype.changePoint = function (index, x, y) {
+        this.xs[index] = x;
+        this.ys[index] = y;
+        this._updateWeights();
+      };
+
+      /**
+       * Recalculate barycentric weights.
+       */
+      Lagrange.prototype._updateWeights = function () {
+        var k = this.xs.length;
+        var w;
+
+        for (var j = 0; j < k; ++j) {
+          w = 1;
+          for (var i = 0; i < k; ++i) {
+            if (i != j) {
+              w *= this.xs[j] - this.xs[i];
+            }
+          }
+          this.ws[j] = 1 / w;
+        }
+      };
+
+      /**
+       * Calculate L(x)
+       */
+      Lagrange.prototype.valueOf = function (x) {
+        var a = 0;
+        var b = 0;
+        var c = 0;
+
+        for (var j = 0; j < this.xs.length; ++j) {
+          if (x != this.xs[j]) {
+            a = this.ws[j] / (x - this.xs[j]);
+            b += a * this.ys[j];
+            c += a;
+          } else {
+            return this.ys[j];
+          }
+        }
+
+        return b / c;
+      };
+      const modulus = Math.pow(2, 127) - 1;
+
+      function charToInt(char) {
+        return char.charCodeAt(0);
+      }
+
+      function extractShareData(share) {
+        // First 8 characters contain id
+        const idStr = share.substring(0, 8);
+        const id = parseInt(idStr);
+
+        // Rest of the characters contain the share
+        const shareStr = share.substring(8);
+        const shareData = +shareStr;
+
+        return [id, shareData];
+      }
+
+      function generateShares(secret, totalShares) {
+        const split_result_container = document.querySelector("#split-results");
+        const secretArr = secret.split("");
+        const sharesArr = [];
+
+        const secret_int = secret;
+
+        let coefficients = [secret_int];
+        for (let i = 1; i < totalShares; i++) {
+          coefficients.push(Math.floor(Math.random() * 100));
+        }
+
+        let shares = [];
+        for (let i = 0; i < totalShares; i++) {
+          let sum = 0n;
+
+          for (const coefficient of coefficients) {
+            sum +=
+              BigInt(coefficient) *
+              BigInt(Math.pow(i + 1, coefficients.indexOf(coefficient)));
+          }
+
+          shares.push(sum);
+        }
+
+        shares = shares.map((share, idx) => {
+          const idStr = (idx + 1).toString().padStart(8, "0");
+          return idStr + "" + share;
+        });
+
+        console.log(shares);
+
+        return shares;
+      }
+
+      function split() {
+        const str = document.querySelector("#split-input").value;
+        const k = parseInt(document.querySelector("#k-split-input").value);
+
+        const split_result_container = document.querySelector("#split-results");
+        split_result_container.innerHTML = "";
+
+        const secret = str;
+        split_result_container.innerHTML += `Secret: ${secret} <br>`;
+        split_result_container.innerHTML += `K: ${k} <br>`;
+
+        const shares = generateShares(secret, k);
+        split_result_container.innerHTML += `<br /> Shares: <br /> ${shares.join(
+          "<br />"
+        )}`;
+      }
+
+      function join() {
+        let result = "";
+
+        const share_inputs = document.querySelectorAll(".share-join-input");
+        const shares = Array.from(share_inputs).map((input) => input.value);
+
+        const k = parseInt(document.querySelector("#k-join-input").value);
+
+        const shareData = shares.map(extractShareData);
+
+        const x = shareData.map((share) => share[0]);
+        const y = shareData.map((share) => share[1]);
+
+        const l = new Lagrange(x[0], y[0], x[1], y[1]);
+        for (let i = 2; i < k; i++) {
+          l.addPoint(x[i], y[i]);
+        }
+
+        result = l.valueOf(0);
+
+        const join_result_container = document.querySelector("#join-results");
+        join_result_container.innerHTML = `Secret: ${result}`;
+      }
+
+      document.querySelector("#split-button").addEventListener("click", () => {
+        split();
+      });
+
+      document.querySelector("#join-button").addEventListener("click", () => {
+        join();
+      });
+
+      document
+        .querySelector("#add-share-button")
+        .addEventListener("click", () => {
+          const row = document.createElement("div");
+          row.classList.add("row");
+
+          const input = document.createElement("input");
+          input.type = "text";
+          input.autocomplete = "off";
+          input.classList.add("share-join-input");
+
+          const removeButton = document.createElement("button");
+          removeButton.textContent = "-";
+          removeButton.addEventListener("click", () => {
+            row.remove();
+          });
+
+          row.appendChild(input);
+          row.appendChild(removeButton);
+
+          document.querySelector("#shares_container").appendChild(row);
+        });
+
+      split();
+      join();
+    </script>
+
+    <style>
+      .row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      body {
+        padding-bottom: 5rem;
+      }
+    </style>
+  </body>
+</html>
