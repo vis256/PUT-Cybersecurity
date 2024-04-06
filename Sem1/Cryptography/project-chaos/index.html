@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chaos cipher</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <h1>Cryptography project - chaos cipher</h1>
+
+    <h2>Encrypt</h2>
+
+    <div class="row">
+      <span>Secret</span>
+      <textarea autocomplete="off" id="split-input" rows="5" cols="50">
+Hello World!</textarea
+      >
+    </div>
+
+    <div class="row">
+      <span>r</span>
+      <input type="number" autocomplete="off" id="r-input" value="3.9" />
+    </div>
+
+    <div class="row">
+      <span>Starting value</span>
+      <input
+        type="number"
+        autocomplete="off"
+        id="starting-value-input"
+        value="0.5"
+      />
+    </div>
+
+    <div class="row">
+      <span>Iterations</span>
+      <input
+        type="number"
+        autocomplete="off"
+        id="iterations-input"
+        value="100"
+      />
+    </div>
+
+    <button id="split-button">Encrypt</button>
+
+    <br />
+    <code id="split-results"></code>
+
+    <canvas id="encryption-chaos-chart"></canvas>
+
+    <h2>Decrypt</h2>
+
+    <div class="row">
+      <span>Encrypted</span>
+      <textarea autocomplete="off" id="join-input" rows="5" cols="50">
+»Ó¤Ò</textarea
+      >
+    </div>
+
+    <div class="row">
+      <span>r</span>
+      <input
+        type="number"
+        autocomplete="off"
+        id="r-decrypt-input"
+        value="3.9"
+      />
+    </div>
+
+    <div class="row">
+      <span>Starting value</span>
+      <input
+        type="number"
+        autocomplete="off"
+        id="starting-value-input"
+        value="0.5"
+      />
+    </div>
+
+    <div class="row">
+      <span>Iterations</span>
+      <input
+        type="number"
+        autocomplete="off"
+        id="iterations-decrypt-input"
+        value="100"
+      />
+    </div>
+
+    <button id="join-button">Decrypt</button>
+
+    <br />
+    <code id="join-results"></code>
+
+    <!-- Scripts -->
+    <!-- Logistic Map Cipher -->
+    <script>
+      function logisticMap(x, r) {
+        return r * x * (1 - x);
+      }
+    </script>
+
+    <!-- Chaotic encryption and decryption functions -->
+    <script>
+      function chaoticEncrypt(message, r, iterations, startingValue) {
+        let encryptedMessage = "";
+
+        // Used to display chart
+        const chaoticSequence = [];
+
+        for (let i = 0; i < message.length; i++) {
+          let charCode = message.charCodeAt(i);
+          let x = startingValue;
+          chaoticSequence.push(x);
+
+          for (let j = 0; j < iterations; j++) {
+            x = logisticMap(x, r);
+            chaoticSequence.push(x);
+          }
+
+          let encryptedCharCode = charCode ^ Math.floor(x * 255);
+          encryptedMessage += String.fromCharCode(encryptedCharCode);
+        }
+
+        return { message: encryptedMessage, chaoticSequence: chaoticSequence };
+      }
+
+      function chaoticDecrypt(encryptedMessage, r, iterations, startingValue) {
+        let decryptedMessage = "";
+
+        for (let i = 0; i < encryptedMessage.length; i++) {
+          let charCode = encryptedMessage.charCodeAt(i);
+
+          let x = startingValue;
+
+          for (let j = 0; j < iterations; j++) {
+            x = logisticMap(x, r);
+          }
+
+          let decryptedCharCode = charCode ^ Math.floor(x * 255);
+          decryptedMessage += String.fromCharCode(decryptedCharCode);
+        }
+
+        return decryptedMessage;
+      }
+    </script>
+
+    <!-- Handlers -->
+    <!-- Encrypt -->
+    <script>
+      var chart;
+
+      document.getElementById("split-button").addEventListener("click", () => {
+        const message = document.getElementById("split-input").value;
+        const r = parseFloat(document.getElementById("r-input").value);
+        const startingValue = parseFloat(
+          document.getElementById("starting-value-input").value
+        );
+        const iterations = parseInt(
+          document.getElementById("iterations-input").value
+        );
+
+        const { message: encryptedMessage, chaoticSequence: sequence } =
+          chaoticEncrypt(message, r, iterations, startingValue);
+
+        const splitResultContainer = document.getElementById("split-results");
+        splitResultContainer.innerHTML = encryptedMessage;
+
+        console.log(sequence);
+
+        const encryptionChart = document.getElementById(
+          "encryption-chaos-chart"
+        );
+        const ctx = encryptionChart.getContext("2d");
+
+        const data = {
+          labels: Array.from({ length: sequence.length }, (_, i) => i),
+          datasets: [
+            {
+              label: "Chaotic sequence",
+              data: sequence,
+              borderColor: "rgb(255, 99, 132)",
+              tension: 0,
+            },
+          ],
+        };
+
+        if (chart) {
+          chart.destroy();
+        }
+
+        chart = new Chart(ctx, {
+          type: "line",
+          data: data,
+          options: {
+            animation: false,
+            datasets: {
+              line: {
+                tension: 0,
+                pointRadius: 0,
+              },
+            },
+          },
+        });
+      });
+    </script>
+
+    <!-- Decrypt -->
+    <script>
+      document.getElementById("join-button").addEventListener("click", () => {
+        const encryptedMessage = document.getElementById("join-input").value;
+        const r = parseFloat(document.getElementById("r-decrypt-input").value);
+        const startingValue = parseFloat(
+          document.getElementById("starting-value-input").value
+        );
+        const iterations = parseInt(
+          document.getElementById("iterations-decrypt-input").value
+        );
+
+        const decryptedMessage = chaoticDecrypt(
+          encryptedMessage,
+          r,
+          iterations,
+          startingValue
+        );
+
+        const joinResultContainer = document.getElementById("join-results");
+
+        joinResultContainer.innerHTML = decryptedMessage;
+      });
+    </script>
+
+    <style>
+      .row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      body {
+        padding-bottom: 5rem;
+      }
+    </style>
+  </body>
+</html>
