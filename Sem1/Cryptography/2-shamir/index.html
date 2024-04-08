@@ -18,6 +18,10 @@
       <input type="number" autocomplete="off" id="split-input" value="69" />
     </div>
     <div class="row">
+      <span>N</span>
+      <input type="number" autocomplete="off" id="n-split-input" value="5" />
+    </div>
+    <div class="row">
       <span>K</span>
       <input type="number" autocomplete="off" id="k-split-input" value="3" />
     </div>
@@ -30,15 +34,15 @@
     <div id="shares_container"></div>
     <button id="add-share-button">+</button>
 
-    <div class="row">
-      <span>K</span>
-      <input type="number" autocomplete="off" id="k-join-input" value="3" />
-    </div>
+    <br />
+
     <button id="join-button">Join</button>
 
     <br />
     <code id="join-results"></code>
+
     <!-- Scripts -->
+    <!-- Lagrange -->
     <script defer>
       /**
        * At least two points are needed to interpolate something.
@@ -117,133 +121,120 @@
 
         return b / c;
       };
-      const modulus = Math.pow(2, 127) - 1;
+    </script>
 
-      function charToInt(char) {
-        return char.charCodeAt(0);
-      }
-
-      function extractShareData(share) {
-        // First 8 characters contain id
-        const idStr = share.substring(0, 8);
-        const id = parseInt(idStr);
-
-        // Rest of the characters contain the share
-        const shareStr = share.substring(8);
-        const shareData = +shareStr;
-
-        return [id, shareData];
-      }
-
-      function generateShares(secret, totalShares) {
-        const split_result_container = document.querySelector("#split-results");
-        const secretArr = secret.split("");
-        const sharesArr = [];
-
-        const secret_int = secret;
-
-        let coefficients = [secret_int];
-        for (let i = 1; i < totalShares; i++) {
-          coefficients.push(Math.floor(Math.random() * 100));
+    <script defer>
+      function splitSecret(secret, n, k) {
+        const coefficients = [secret];
+        for (var i = 1; i < k; i++) {
+          coefficients.push(Math.floor(Math.random() * 256));
         }
 
-        let shares = [];
-        for (let i = 0; i < totalShares; i++) {
-          let sum = 0n;
+        const shares = [];
 
-          for (const coefficient of coefficients) {
-            sum +=
-              BigInt(coefficient) *
-              BigInt(Math.pow(i + 1, coefficients.indexOf(coefficient)));
+        for (let x = 1; x <= n; x++) {
+          let y = 0;
+
+          for (let j = 0; j < k; j++) {
+            y += coefficients[j] * Math.pow(x, j);
           }
 
-          shares.push(sum);
+          shares.push({ x, y });
         }
-
-        shares = shares.map((share, idx) => {
-          const idStr = (idx + 1).toString().padStart(8, "0");
-          return idStr + "" + share;
-        });
-
-        console.log(shares);
 
         return shares;
       }
 
-      function split() {
-        const str = document.querySelector("#split-input").value;
-        const k = parseInt(document.querySelector("#k-split-input").value);
-
-        const split_result_container = document.querySelector("#split-results");
-        split_result_container.innerHTML = "";
-
-        const secret = str;
-        split_result_container.innerHTML += `Secret: ${secret} <br>`;
-        split_result_container.innerHTML += `K: ${k} <br>`;
-
-        const shares = generateShares(secret, k);
-        split_result_container.innerHTML += `<br /> Shares: <br /> ${shares.join(
-          "<br />"
-        )}`;
-      }
-
-      function join() {
-        let result = "";
-
-        const share_inputs = document.querySelectorAll(".share-join-input");
-        const shares = Array.from(share_inputs).map((input) => input.value);
-
-        const k = parseInt(document.querySelector("#k-join-input").value);
-
-        const shareData = shares.map(extractShareData);
-
-        const x = shareData.map((share) => share[0]);
-        const y = shareData.map((share) => share[1]);
-
-        const l = new Lagrange(x[0], y[0], x[1], y[1]);
-        for (let i = 2; i < k; i++) {
-          l.addPoint(x[i], y[i]);
+      /**
+       * Join shares to reconstruct the secret number using Lagrange polynomial interpolation.
+       * @param {Array} shares - An array of shares, each containing x and y coordinates.
+       * @returns {number|null} The reconstructed secret number, or null if reconstruction fails.
+       */
+      function joinShares(shares) {
+        if (shares.length < 2) {
+          throw new Error(
+            "At least two shares are needed to interpolate the secret."
+          );
         }
 
-        result = l.valueOf(0);
+        const lagrange = new Lagrange(
+          shares[0].x,
+          shares[0].y,
+          shares[1].x,
+          shares[1].y
+        );
 
-        const join_result_container = document.querySelector("#join-results");
-        join_result_container.innerHTML = `Secret: ${result}`;
+        for (let i = 2; i < shares.length; i++) {
+          lagrange.addPoint(shares[i].x, shares[i].y);
+        }
+
+        // Reconstruct the secret by evaluating the Lagrange polynomial at x=0
+        const secret = lagrange.valueOf(0);
+        return Math.round(secret);
       }
+    </script>
 
-      document.querySelector("#split-button").addEventListener("click", () => {
-        split();
+    <script defer>
+      const sharesContainer = document.getElementById("shares_container");
+      const addShareButton = document.getElementById("add-share-button");
+      const joinButton = document.getElementById("join-button");
+      const joinResults = document.getElementById("join-results");
+
+      let shareIndex = 0;
+
+      addShareButton.addEventListener("click", () => {
+        const shareDiv = document.createElement("div");
+        shareDiv.classList.add("row");
+
+        const xInput = document.createElement("input");
+        xInput.type = "number";
+        xInput.placeholder = "X";
+        shareDiv.appendChild(xInput);
+
+        const yInput = document.createElement("input");
+        yInput.type = "number";
+        yInput.placeholder = "Y";
+        shareDiv.appendChild(yInput);
+
+        sharesContainer.appendChild(shareDiv);
+
+        shareIndex++;
       });
 
-      document.querySelector("#join-button").addEventListener("click", () => {
-        join();
+      joinButton.addEventListener("click", () => {
+        const shares = [];
+        for (const shareDiv of sharesContainer.children) {
+          const xInput = shareDiv.children[0];
+          const yInput = shareDiv.children[1];
+
+          const x = parseInt(xInput.value);
+          const y = parseInt(yInput.value);
+
+          shares.push({ x, y });
+        }
+
+        const secret = joinShares(shares);
+        joinResults.textContent = `Secret: ${secret}`;
       });
+    </script>
 
-      document
-        .querySelector("#add-share-button")
-        .addEventListener("click", () => {
-          const row = document.createElement("div");
-          row.classList.add("row");
+    <script defer>
+      const splitButton = document.getElementById("split-button");
+      const splitInput = document.getElementById("split-input");
+      const nSplitInput = document.getElementById("n-split-input");
+      const kSplitInput = document.getElementById("k-split-input");
+      const splitResults = document.getElementById("split-results");
 
-          const input = document.createElement("input");
-          input.type = "text";
-          input.autocomplete = "off";
-          input.classList.add("share-join-input");
+      splitButton.addEventListener("click", () => {
+        const secret = parseInt(splitInput.value);
+        const n = parseInt(nSplitInput.value);
+        const k = parseInt(kSplitInput.value);
 
-          const removeButton = document.createElement("button");
-          removeButton.textContent = "-";
-          removeButton.addEventListener("click", () => {
-            row.remove();
-          });
-
-          row.appendChild(input);
-          row.appendChild(removeButton);
-
-          document.querySelector("#shares_container").appendChild(row);
-        });
-
-      split();
-      join();
+        const shares = splitSecret(secret, n, k);
+        for (const share of shares) {
+          splitResults.textContent += `(${share.x}, ${share.y}) `;
+        }
+      });
     </script>
 
     <style>
