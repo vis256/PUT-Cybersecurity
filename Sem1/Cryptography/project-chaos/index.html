@@ -117,11 +117,12 @@ Hello World!</textarea
         for (let i = 0; i < message.length; i++) {
           let charCode = message.charCodeAt(i);
           let x = startingValue;
-          chaoticSequence.push(x);
+
+          if (i === 0) chaoticSequence.push(x);
 
           for (let j = 0; j < iterations; j++) {
             x = logisticMap(x, r);
-            chaoticSequence.push(x);
+            if (i === 0) chaoticSequence.push(x);
           }
 
           let encryptedCharCode = charCode ^ Math.floor(x * 255);
