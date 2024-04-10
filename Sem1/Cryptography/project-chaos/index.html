@@ -47,7 +47,10 @@ Hello World!</textarea
       />
     </div>
 
-    <button id="split-button">Encrypt</button>
+    <div class="row">
+      <button id="split-button">Encrypt</button>
+      <button id="copy-button">Copy</button>
+    </div>
 
     <br />
     <code id="split-results"></code>
@@ -114,15 +117,18 @@ Hello World!</textarea
         // Used to display chart
         const chaoticSequence = [];
 
+        let dx = startingValue;
+        for (let i = 0; i < iterations; i++) {
+          dx = logisticMap(dx, r);
+          chaoticSequence.push(dx);
+        }
+
         for (let i = 0; i < message.length; i++) {
           let charCode = message.charCodeAt(i);
           let x = startingValue;
 
-          if (i === 0) chaoticSequence.push(x);
-
-          for (let j = 0; j < iterations; j++) {
+          for (let j = 0; j < i; j++) {
             x = logisticMap(x, r);
-            if (i === 0) chaoticSequence.push(x);
           }
 
           let encryptedCharCode = charCode ^ Math.floor(x * 255);
@@ -140,7 +146,7 @@ Hello World!</textarea
 
           let x = startingValue;
 
-          for (let j = 0; j < iterations; j++) {
+          for (let j = 0; j < i; j++) {
             x = logisticMap(x, r);
           }
 
@@ -234,6 +240,15 @@ Hello World!</textarea
         const joinResultContainer = document.getElementById("join-results");
 
         joinResultContainer.innerHTML = decryptedMessage;
+      });
+    </script>
+
+    <script defer>
+      document.getElementById("copy-button").addEventListener("click", () => {
+        const splitResults = document.getElementById("split-results");
+        const textarea = document.querySelector("#join-input");
+
+        textarea.value = splitResults.innerText;
       });
     </script>
 
