@@ -86,16 +86,6 @@ Hello World!</textarea
       />
     </div>
 
-    <div class="row">
-      <span>Iterations</span>
-      <input
-        type="number"
-        autocomplete="off"
-        id="iterations-decrypt-input"
-        value="100"
-      />
-    </div>
-
     <button id="join-button">Decrypt</button>
 
     <br />
@@ -138,7 +128,7 @@ Hello World!</textarea
         return { message: encryptedMessage, chaoticSequence: chaoticSequence };
       }
 
-      function chaoticDecrypt(encryptedMessage, r, iterations, startingValue) {
+      function chaoticDecrypt(encryptedMessage, r, startingValue) {
         let decryptedMessage = "";
 
         for (let i = 0; i < encryptedMessage.length; i++) {
@@ -226,14 +216,10 @@ Hello World!</textarea
         const startingValue = parseFloat(
           document.getElementById("starting-value-input").value
         );
-        const iterations = parseInt(
-          document.getElementById("iterations-decrypt-input").value
-        );
 
         const decryptedMessage = chaoticDecrypt(
           encryptedMessage,
           r,
-          iterations,
           startingValue
         );
 
